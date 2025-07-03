@@ -1,0 +1,89 @@
+﻿@page "/user"
+
+<MudPaper Class="pa-4 mx-auto">
+    <MudForm @ref="form" Model="@user">
+        <MudText Typo="Typo.h5" Class="mb-2">User Registration</MudText>
+        <MudTextField @bind-Value="user.FirstName" Label="First Name" Required="true" />
+        <MudTextField @bind-Value="user.LastName" Label="Last Name" Required="true" />
+        <MudTextField @bind-Value="user.Email" Label="Email" Required="true" />
+        <MudNumericField @bind-Value="user.Age" Label="Age" Required="true" Min="0" Max="120" />
+        @* <MudSelect @bind-Value="user.Gender" Label="Gender" Required="true"> *@
+        @*     <MudSelectItem Value="1">Male</MudSelectItem> *@
+        @*     <MudSelectItem Value="2">Female</MudSelectItem> *@
+        @*     <MudSelectItem Value="3">Other</MudSelectItem> *@
+        @* </MudSelect> *@
+        <MudTextField @bind-Value="user.Phone" Label="Phone" />
+        <MudTextField @bind-Value="user.Address" Label="Address" />
+        <MudButton OnClick="AddUser" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2">Add</MudButton>
+    </MudForm>
+</MudPaper>
+
+<MudPaper Class="pa-4 mt-6">
+    <MudTable Items="@users" ServerData="LoadServerData" Filterable="true" Hover="true" Bordered="true" Striped="true">
+        <HeaderContent>
+            <MudTh>First Name</MudTh>
+            <MudTh>Last Name</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Age</MudTh>
+            <MudTh>Gender</MudTh>
+            <MudTh>Phone</MudTh>
+            <MudTh>Address</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+            <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Age">@context.Age</MudTd>
+            <MudTd DataLabel="Gender">@context.Gender</MudTd>
+            <MudTd DataLabel="Phone">@context.Phone</MudTd>
+            <MudTd DataLabel="Address">@context.Address</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudForm form;
+    private User user = new();
+    private List<User> users = new();
+
+    private async Task AddUser()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            users.Add(new User
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Age = user.Age,
+                Gender = user.Gender,
+                Phone = user.Phone,
+                Address = user.Address
+            });
+            user = new User();
+            await form.ResetAsync();
+            StateHasChanged();
+        }
+    }
+
+    private Task<TableData<User>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var data = users.Skip(state.Page * state.PageSize).Take(state.PageSize).ToList();
+        return Task.FromResult(new TableData<User> { TotalItems = users.Count, Items = data });
+    }
+
+    public class User
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Email { get; set; }
+        public int Age { get; set; }
+        public string Gender { get; set; }
+        public string Phone { get; set; }
+        public string Address { get; set; }
+    }
+}
