@@ -1,21 +1,17 @@
 ﻿@page "/user"
+@using System.ComponentModel.DataAnnotations
 
 <MudPaper Class="pa-4 mx-auto">
-    <MudForm @ref="form" Model="@user">
-        <MudText Typo="Typo.h5" Class="mb-2">User Registration</MudText>
-        <MudTextField @bind-Value="user.FirstName" Label="First Name" Required="true" />
-        <MudTextField @bind-Value="user.LastName" Label="Last Name" Required="true" />
-        <MudTextField @bind-Value="user.Email" Label="Email" Required="true" />
-        <MudNumericField @bind-Value="user.Age" Label="Age" Required="true" Min="0" Max="120" />
-        @* <MudSelect @bind-Value="user.Gender" Label="Gender" Required="true"> *@
-        @*     <MudSelectItem Value="1">Male</MudSelectItem> *@
-        @*     <MudSelectItem Value="2">Female</MudSelectItem> *@
-        @*     <MudSelectItem Value="3">Other</MudSelectItem> *@
-        @* </MudSelect> *@
-        <MudTextField @bind-Value="user.Phone" Label="Phone" />
-        <MudTextField @bind-Value="user.Address" Label="Address" />
-        <MudButton OnClick="AddUser" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2">Add</MudButton>
+    <MudForm @ref="form" bind-IsValid="isSuccess" bind-Errors="errors" Model="@user">
+        <MudTextField T="string" @bind-Value="@user.FirstName" Label="First Name" Required="true" RequiredError="First Name is required" />
+        <MudTextField T="string" @bind-Value="@user.LastName" Label="Last Name" Required="true" Class="mt-3" RequiredError="Last Name is required" />
+        <MudTextField T="string" @bind-Value="@user.Email" Label="Email" Required="true" Class="mt-3" RequiredError="Email is required"
+                      Validation="@(new EmailAddressAttribute() {ErrorMessage = "The email address is invalid"})" />
     </MudForm>
+    <MudPaper Class="pa-4 mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddUser">Save User</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary" DropShadow="false" OnClick="@(() => form.ResetAsync())" Class="mx-2">Reset</MudButton>
+    </MudPaper>
 </MudPaper>
 
 <MudPaper Class="pa-4 mt-6">
@@ -45,6 +41,8 @@
 </MudPaper>
 
 @code {
+    private bool isSuccess;
+    private string[] errors = [];
     private MudForm form;
     private User user = new();
     private List<User> users = new();
