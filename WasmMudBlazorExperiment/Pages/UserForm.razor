@@ -1,21 +1,46 @@
 ﻿@page "/user"
+
+@inject ILogger<UserForm> Logger
+
 @using System.ComponentModel.DataAnnotations
 
+
+<MudPaper Class="pa-4" mx-auto>
+    <MudText Typo="Typo.h4" Align="Align.Center">User Form</MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center">This is a simple user form with validation and server-side data loading.</MudText>
+</MudPaper>
+
 <MudPaper Class="pa-4 mx-auto">
-    <MudForm @ref="form" bind-IsValid="isSuccess" bind-Errors="errors" Model="@user">
-        <MudTextField T="string" @bind-Value="@user.FirstName" Label="First Name" Required="true" RequiredError="First Name is required" />
-        <MudTextField T="string" @bind-Value="@user.LastName" Label="Last Name" Required="true" Class="mt-3" RequiredError="Last Name is required" />
-        <MudTextField T="string" @bind-Value="@user.Email" Label="Email" Required="true" Class="mt-3" RequiredError="Email is required"
-                      Validation="@(new EmailAddressAttribute() {ErrorMessage = "The email address is invalid"})" />
+    <MudForm @ref="_form" bind-IsValid="IsSuccess" bind-Errors="_errors" Model="@_model">
+        <MudTextField T="string" @bind-Value="_model.FirstName" For="@(() => _model.FirstName)" Immediate="true" Label="First Name" Required="true" RequiredError="First Name is required" />
+        <MudTextField T="string" @bind-Value="_model.LastName" For="@(() => _model.LastName)" Immediate="true" Label="Last Name" Required="true" Class="mt-3" RequiredError="Last Name is required" />
+        <MudTextField T="string" @bind-Value="_model.Email" For="@(() => _model.Email)" Immediate="true" Label="Email" Required="true" Class="mt-3" RequiredError="Email is required"
+                      Validation="@(new EmailAddressAttribute() { ErrorMessage = "The email address is invalid" })" />
+        
+        <MudNumericField T="int" @bind-Value="_model.Age" For="() => _model.Age" Immediate="true" Label="Age" Required="true" RequiredError="Age is required"/>
+        <MudRadioGroup T="string" @bind-Value="_model.Gender">
+            <MudRadio Value="@("Male")" Color="Color.Primary">Male</MudRadio>
+            <MudRadio Value="@("Female")" Color="Color.Primary">Female</MudRadio>
+        </MudRadioGroup>
+        
+        <MudTextField T="string" @bind-Value="_model.Phone" For="() => _model.Phone" Label="Phone" Required="true" Immediate="true" RequiredError="Phone Number is required"/>
+        
+        <MudTextField T="string" @bind-Value="_model.Address" For="() => _model.Address" Label="Address" Required="true" Immediate="true" RequiredError="Address is required"></MudTextField>
+        <MudPaper Class="pa-4 mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(async () => await AddUser())">@_buttonText</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" DropShadow="false" OnClick="@(() => _form.ResetAsync())" Class="mx-2">Reset</MudButton>
+        </MudPaper>
     </MudForm>
-    <MudPaper Class="pa-4 mt-4">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddUser">Save User</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Secondary" DropShadow="false" OnClick="@(() => form.ResetAsync())" Class="mx-2">Reset</MudButton>
-    </MudPaper>
 </MudPaper>
 
 <MudPaper Class="pa-4 mt-6">
-    <MudTable Items="@users" ServerData="LoadServerData" Filterable="true" Hover="true" Bordered="true" Striped="true">
+    <MudTable ServerData="LoadServerData" Hover="true" Bordered="true" Striped="true" @ref="_table">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Users</MudText>
+            <MudSpacer />
+            <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
         <HeaderContent>
             <MudTh>First Name</MudTh>
             <MudTh>Last Name</MudTh>
@@ -41,37 +66,55 @@
 </MudPaper>
 
 @code {
-    private bool isSuccess;
-    private string[] errors = [];
-    private MudForm form;
-    private User user = new();
-    private List<User> users = new();
+    public bool IsSuccess;
+    private readonly string[] _errors = [];
+    private MudForm _form;
+    User _model = new();
+    private readonly List<User> _users = new();
+    private string _buttonText = "Save User";
+    private MudTable<User> _table;
+    private string _searchString = string.Empty;
 
     private async Task AddUser()
     {
-        await form.Validate();
-        if (form.IsValid)
+        Logger.LogInformation("Start to save user");
+        _buttonText = "Saving...";
+        Logger.LogInformation("User Information, {FirstName}", _model.FirstName);
+        await _form.Validate()!;
+        if (_form.IsValid)
         {
-            users.Add(new User
+            _users.Add(new User
             {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Age = user.Age,
-                Gender = user.Gender,
-                Phone = user.Phone,
-                Address = user.Address
+                FirstName = _model.FirstName,
+                LastName = _model.LastName,
+                Email = _model.Email,
+                Age = _model.Age,
+                Gender = _model.Gender,
+                Phone = _model.Phone,
+                Address = _model.Address
             });
-            user = new User();
-            await form.ResetAsync();
+
+            Logger.LogInformation("Users total: {total} ", _users.Count);
+
+            _model = new User();
+            await _form.ResetAsync();
+            Logger.LogInformation("After Reset the form");
+            _table?.ReloadServerData();
+            _buttonText = "Save User";
             StateHasChanged();
         }
     }
 
     private Task<TableData<User>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
-        var data = users.Skip(state.Page * state.PageSize).Take(state.PageSize).ToList();
-        return Task.FromResult(new TableData<User> { TotalItems = users.Count, Items = data });
+        var data = _users.Skip(state.Page * state.PageSize).Take(state.PageSize).ToList();
+        return Task.FromResult(new TableData<User> {TotalItems = _users.Count, Items = data});
+    }
+
+    private void OnSearch(string text)
+    {
+        _searchString = text;
+        _table.ReloadServerData();
     }
 
     public class User

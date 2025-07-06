@@ -5,6 +5,7 @@ using WasmMudBlazorExperiment;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Services.AddMudServices();
 
 builder.RootComponents.Add<App>("#app");
