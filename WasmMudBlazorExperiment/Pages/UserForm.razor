@@ -3,6 +3,7 @@
 @inject ILogger<UserForm> Logger
 
 @using System.ComponentModel.DataAnnotations
+@using Bogus
 
 
 <MudPaper Class="pa-4" mx-auto>
@@ -70,10 +71,17 @@
     private readonly string[] _errors = [];
     private MudForm _form;
     User _model = new();
-    private readonly List<User> _users = new();
+    private List<User> _users = new();
     private string _buttonText = "Save User";
     private MudTable<User> _table;
     private string _searchString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        GenerateFakeUserData();
+        Logger.LogInformation("UserForm initialized with {Count} users", _users.Count);
+        await Task.CompletedTask;
+    }
 
     private async Task AddUser()
     {
@@ -105,9 +113,37 @@
         }
     }
 
+    private void GenerateFakeUserData()
+    {
+        _users = new Faker<User>()
+            .RuleFor(x => x.Gender, f => f.PickRandom("Male", "Female"))
+            .RuleFor(x => x.FirstName, (f, u) => f.Name.FirstName(u.Gender == "Male" ? Bogus.DataSets.Name.Gender.Male : Bogus.DataSets.Name.Gender.Female))
+            .RuleFor(x => x.LastName, (f, u) => f.Name.LastName(u.Gender == "Male" ? Bogus.DataSets.Name.Gender.Male : Bogus.DataSets.Name.Gender.Female))
+            .RuleFor(x => x.Email, f => f.Internet.Email())
+            .RuleFor(x => x.Age, f => f.Random.Int(18, 80))
+            .RuleFor(x => x.Phone, f => f.Phone.PhoneNumber())
+            .RuleFor(x => x.Address, f => f.Address.FullAddress())
+            .Generate(25);
+    }
+
     private Task<TableData<User>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
-        var data = _users.Skip(state.Page * state.PageSize).Take(state.PageSize).ToList();
+        var filteredData = _users.Where(element =>
+        {
+            if (string.IsNullOrWhiteSpace(_searchString))
+                return true;
+            if (element.FirstName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (element.LastName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (element.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (element.Phone.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }).ToList();
+
+        var data = filteredData.Skip(state.Page * state.PageSize).Take(state.PageSize).ToList();
         return Task.FromResult(new TableData<User> {TotalItems = _users.Count, Items = data});
     }
 
